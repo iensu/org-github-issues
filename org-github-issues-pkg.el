@@ -1,7 +1,4 @@
-(define-package
-  "org-github-issues"
-  "0.0.1"
-  "A tool for creating org-mode todos from github issues"
-  '((emacs "25")
+(define-package "org-github-issues" "0.0.1" "Package for creating todos from Github issues"
+  '((gh "1.0.0")
     (dash "2.13.0")
-    (gh "1.0.0")))
+    (emacs "25")))
