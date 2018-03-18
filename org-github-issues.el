@@ -66,16 +66,19 @@
           data)))
 
 (defun ogi--issue-url (owner repo number)
+  "Return url to issue based on OWNER, REPO and issue NUMBER."
   (format "https://github.com/%s/%s/issues/%d"
           owner repo number))
 
 (defun ogi--labels-to-tags (issue)
+  "Return a string of org tags based on labels from ISSUE."
   (let ((labels (mapcar (lambda (label) (oref label name)) (oref issue labels))))
     (if labels
         (concat ":" (string-join labels ":") ":")
       "")))
 
 (defun ogi--create-org-entry (depth owner repo issue)
+  "Return a string representation of an org entry generated from headling level DEPTH, OWNER, REPO, ISSUE."
   (let* ((title (oref issue title))
          (number (oref issue number))
          (body (oref issue body))
@@ -94,6 +97,7 @@
     (s-replace "\r" "" body)))
 
 (defun ogi--delete-org-entry ()
+  "Delete org entry at point until the next headline."
   (deactivate-mark)
   (outline-mark-subtree)
   (kill-region (region-beginning) (region-end))
@@ -103,6 +107,7 @@
   (deactivate-mark))
 
 (defun ogi--delete-existing-issues (owner repo)
+  "Delete all previously created org entries matching OWNER and REPO."
   (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo))
         (file (concat (file-name-as-directory org-github-issues-org-dir)
                       org-github-issues-org-file-name)))
@@ -112,9 +117,11 @@
      '(file))))
 
 (defun ogi--get-org-file-headline-position (headline)
+  "Return the marker for the given org HEADLINE."
   (org-find-exact-heading-in-directory headline org-github-issues-org-dir))
 
 (defun ogi--get-issue-headline-level (headline)
+  "Return the subtree level for issues under HEADLINE."
   (let ((pos (ogi--get-org-file-headline-position headline)))
     (save-excursion
       (with-current-buffer (marker-buffer pos)
@@ -122,9 +129,11 @@
         (1+ (org-current-level))))))
 
 (defun ogi--generate-org-entries (depth owner repo issues)
+  "Create entries based on DEPTH, OWNER and REPO from ISSUES."
   (mapcar (-partial 'ogi--create-org-entry depth owner repo) issues))
 
-(defun ogi--insert-org-entries (headline entries)
+(defun ogi--insert-org-entries (entries headline)
+  "Insert ENTRIES under HEADLINE."
   (let ((body (string-join entries "\n"))
         (pos (ogi--get-org-file-headline-position headline)))
     (save-excursion
@@ -155,7 +164,7 @@ Executing this function will replace already downloaded issues."
          (issues (ogi--fetch-issues owner repo))
          (level (ogi--get-issue-headline-level headline))
          (entries (ogi--generate-org-entries level owner repo issues)))
-    (ogi--insert-org-entries headline entries)))
+    (ogi--insert-org-entries entries headline)))
 
 (provide 'org-github-issues)
 ;;; org-github-issues.el ends here
