@@ -30,6 +30,21 @@
 (require 'gh)
 (require 'dash)
 
+
+(defgroup org-github-issues nil
+  "Tool for creating org-mode todos out of Github issues"
+  :group 'tools)
+
+(defcustom org-github-issues-org-file-name "projects.org"
+  "Name of `org-mode' file in which to store issues."
+  :type 'string
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-org-dir "~/Dropbox/org"
+  "Path to `org-mode' directory."
+  :type 'directory
+  :group 'org-github-issues)
+
 (defun ogi--connect ()
   "Return a Github Issues api connection."
   (gh-issues-api "API"))
@@ -81,14 +96,16 @@
   (deactivate-mark))
 
 (defun ogi--delete-existing-issues (owner repo)
-  (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo)))
+  (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo))
+        (file (concat (file-name-as-directory org-github-issues-org-dir)
+                      org-github-issues-org-file-name)))
     (org-map-entries
      'ogi--delete-org-entry
      match
-     'agenda)))
+     '(file))))
 
 (defun ogi--get-org-file-headline-position (headline)
-  (org-find-exact-heading-in-directory headline iensu-org-dir))
+  (org-find-exact-heading-in-directory headline org-github-issues-org-dir))
 
 (defun ogi--get-issue-headline-level (headline)
   (let ((pos (ogi--get-org-file-headline-position headline)))
@@ -116,7 +133,8 @@
 
 Example: https://github.com/<OWNER>/<REPO>
 
-Issues will be put under heading OWNER/REPO.
+Issues will be put under heading OWNER/REPO in the file specified by
+`org-github-issues-org-dir' + `org-github-issues-org-file-name'.
 
 This function will replace already downloaded issues."
   (interactive "sGithub repo: \nsRepo owner: ")
