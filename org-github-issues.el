@@ -22,7 +22,9 @@
 
 ;;; Commentary:
 
-;; Comments...
+;; org-github-issues exposes a interactive function `org-github-issues-sync-issues'
+;; which prompts for repository name and owner, and then creates org-modo TODOs of
+;; all of the open issues in the repository.
 
 ;;; Code:
 
