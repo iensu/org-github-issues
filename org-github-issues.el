@@ -5,6 +5,8 @@
 ;; Author: Jens Östlund <jostlund@gmail.com>
 ;; Keywords: outlines
 ;; Version: 0.0.1
+;; Package-Requires: ((emacs "25") (gh "1.0.0") (dash "2.13.0"))
+;; URL: https://github.com/iensu/org-github-issues
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -24,6 +26,9 @@
 ;; Comments...
 
 ;;; Code:
+
+(require 'gh)
+(require 'dash)
 
 (defun ogi--connect ()
   "Return a Github Issues api connection."
