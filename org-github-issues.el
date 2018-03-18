@@ -3,7 +3,7 @@
 ;; Copyright (C) 2018  Jens Östlund
 
 ;; Author: Jens Östlund <jostlund@gmail.com>
-;; Keywords: outlines
+;; Keywords: tools
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "25") (gh "1.0.0") (dash "2.13.0"))
 ;; URL: https://github.com/iensu/org-github-issues
@@ -30,6 +30,9 @@
 (require 'gh)
 (require 'dash)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Customization options
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defgroup org-github-issues nil
   "Tool for creating org-mode todos out of Github issues"
@@ -45,12 +48,16 @@
   :type 'directory
   :group 'org-github-issues)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helper functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun ogi--connect ()
   "Return a Github Issues api connection."
   (gh-issues-api "API"))
 
 (defun ogi--fetch-issues (owner repo &optional connection)
-  "Return a list of gh-issues-issue objects over CONNECTION from USER/REPO."
+  "Return a list of gh-issues-issue objects from OWNER/REPO over CONNECTION."
   (let ((conn (or connection
                   (ogi--connect))))
     (oref (gh-issues-issue-list conn
@@ -128,7 +135,12 @@
         (insert body)
         (insert "\n")))))
 
-(defun ogi-sync-issues (repo owner)
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Public functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;###autoload
+(defun org-github-issues-sync-issues (repo owner)
   "Fetch and insert all open issues from github REPO by OWNER.
 
 Example: https://github.com/<OWNER>/<REPO>
@@ -136,7 +148,7 @@ Example: https://github.com/<OWNER>/<REPO>
 Issues will be put under heading OWNER/REPO in the file specified by
 `org-github-issues-org-dir' + `org-github-issues-org-file-name'.
 
-This function will replace already downloaded issues."
+Executing this function will replace already downloaded issues."
   (interactive "sGithub repo: \nsRepo owner: ")
   (ogi--delete-existing-issues owner repo)
   (let* ((headline (concat owner "/" repo))
