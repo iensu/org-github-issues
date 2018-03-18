@@ -105,7 +105,8 @@
   (set-mark (point))
   (outline-next-heading)
   (kill-region (region-beginning) (region-end))
-  (deactivate-mark))
+  (deactivate-mark)
+  (setq org-map-continue-from (outline-previous-heading)))
 
 (defun ogi--delete-existing-issues (owner repo)
   "Delete all previously created org entries matching OWNER and REPO."
