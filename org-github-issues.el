@@ -39,14 +39,9 @@
   "Tool for creating org-mode todos out of Github issues"
   :group 'tools)
 
-(defcustom org-github-issues-org-file-name "projects.org"
-  "Name of `org-mode' file in which to store issues."
-  :type 'string
-  :group 'org-github-issues)
-
-(defcustom org-github-issues-org-dir "~/Dropbox/org"
-  "Path to `org-mode' directory."
-  :type 'directory
+(defcustom org-github-issues-org-file "~/Dropbox/org/projects.org"
+  "Path to an existing `org-mode' file in which to write issues."
+  :type '(file :must-match t)
   :group 'org-github-issues)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -110,17 +105,16 @@
 
 (defun ogi--delete-existing-issues (owner repo)
   "Delete all previously created org entries matching OWNER and REPO."
-  (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo))
-        (file (concat (file-name-as-directory org-github-issues-org-dir)
-                      org-github-issues-org-file-name)))
+  (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo)))
     (org-map-entries
      'ogi--delete-org-entry
      match
-     '(file))))
+     `(,org-github-issues-org-file))))
 
 (defun ogi--get-org-file-headline-position (headline)
   "Return the marker for the given org HEADLINE."
-  (org-find-exact-heading-in-directory headline org-github-issues-org-dir))
+  (org-find-exact-heading-in-directory headline
+                                       (file-name-directory org-github-issues-org-file)))
 
 (defun ogi--get-issue-headline-level (headline)
   "Return the subtree level for issues under HEADLINE."
@@ -151,22 +145,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;###autoload
-(defun org-github-issues-sync-issues (repo owner)
-  "Fetch and insert all open issues from github REPO by OWNER.
+(defun org-github-issues-sync-issues (repository)
+  "Fetch and insert all open issues from github REPOSITORY.
 
-Example: https://github.com/<OWNER>/<REPO>
+Example: https://github.com/foo/bar, the repository is `foo/bar'
 
-Issues will be put under heading OWNER/REPO in the file specified by
-`org-github-issues-org-dir' + `org-github-issues-org-file-name'.
+Issues will be put under the heading matching REPOSITORY in the file
+ specified by `org-github-issues-org-file'.
 
 Executing this function will replace already downloaded issues."
-  (interactive "sGithub repo: \nsRepo owner: ")
-  (ogi--delete-existing-issues owner repo)
-  (let* ((headline (concat owner "/" repo))
-         (issues (ogi--fetch-issues owner repo))
-         (level (ogi--get-issue-headline-level headline))
-         (entries (ogi--generate-org-entries level owner repo issues)))
-    (ogi--insert-org-entries entries headline)))
+  (interactive "sGithub repo: ")
+  (let* ((owner-and-repo (split-string repository "/"))
+         (owner (car owner-and-repo))
+         (repo (cadr owner-and-repo)))
+    (ogi--delete-existing-issues owner repo)
+    (let* ((issues (ogi--fetch-issues owner repo))
+           (level (ogi--get-issue-headline-level repository))
+           (entries (ogi--generate-org-entries level owner repo issues)))
+      (ogi--insert-org-entries entries repository))))
 
 (provide 'org-github-issues)
 ;;; org-github-issues.el ends here
