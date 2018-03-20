@@ -68,10 +68,7 @@
 
 (defun ogi--labels-to-tags (issue)
   "Return a string of org tags based on labels from ISSUE."
-  (let ((labels (mapcar (lambda (label) (oref label name)) (oref issue labels))))
-    (if labels
-        (concat ":" (string-join labels ":") ":")
-      "")))
+  (mapcar (lambda (label) (oref label name)) (oref issue labels)))
 
 (defun ogi--create-org-entry (depth owner repo issue)
   "Return a string representation of an org entry generated from headling level DEPTH, OWNER, REPO, ISSUE."
@@ -80,17 +77,18 @@
          (body (oref issue body))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
-         (level (apply 'concat (make-list depth "*")))
-         (body (format (concat "%s TODO #%d: %s %s\n"
-                               "  :PROPERTIES:\n"
-                               "  :GH_URL: %s\n"
-                               "  :GH_OWNER: %s\n"
-                               "  :GH_REPO: %s\n"
-                               "  :GH_ISSUE_NO: %d\n"
-                               "  :END:\n\n"
-                               "%s\n")
-                       level number title tags link owner repo number body)))
-    (s-replace "\r" "" body)))
+         (params (list :title (format "#%d: %s" number title)
+                       :level depth
+                       :todo-keyword "TODO")))
+    (org-element-interpret-data
+     `(headline ,(if tags
+                     (append params (list :tags tags))
+                   params)
+                (property-drawer nil ((node-property (:key "GH_URL" :value ,link))
+                                      (node-property (:key "GH_OWNER" :value ,owner))
+                                      (node-property (:key "GH_REPO" :value ,repo))
+                                      (node-property (:key "GH_ISSUE_NO" :value ,number))))
+                ,body))))
 
 (defun ogi--delete-org-entry ()
   "Delete org entry at point until the next headline."
