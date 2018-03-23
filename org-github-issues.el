@@ -61,6 +61,20 @@
                                 repo)
           data)))
 
+(defun ogi--collect-synced-repository-names ()
+  "Return a list of potential repository names from `org-github-issues-org-file'."
+  (let ((repo-regex "[^\s]+/[^\s]+"))
+    (save-excursion
+      (with-temp-buffer
+        (insert-file-contents org-github-issues-org-file)
+        (org-mode)
+        (org-element-map (org-element-parse-buffer 'headline) 'headline
+          (lambda (hl)
+            (let ((title (car (split-string (org-element-property :title hl) " "))))
+              (when (and (eq (org-element-property :level hl) 1)
+                         (string-match-p repo-regex title))
+                title))))))))
+
 (defun ogi--issue-url (owner repo number)
   "Return url to issue based on OWNER, REPO and issue NUMBER."
   (format "https://github.com/%s/%s/issues/%d"
@@ -152,7 +166,10 @@ Issues will be put under the heading matching REPOSITORY in the file
  specified by `org-github-issues-org-file'.
 
 Executing this function will replace already downloaded issues."
-  (interactive "sGithub repo: ")
+  (interactive
+   (list (completing-read "Github repo: "
+                          (ogi--collect-synced-repository-names)
+                          nil nil)))
   (let* ((owner-and-repo (split-string repository "/"))
          (owner (car owner-and-repo))
          (repo (cadr owner-and-repo)))
