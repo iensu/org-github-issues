@@ -61,6 +61,23 @@
                                 repo)
           data)))
 
+(defun ogi--repo-header-exists-p (repository)
+  "Return t if a level 1 header for REPOSITORY exists in `org-github-issues-org-file'."
+  (let ((repo-headers (ogi--collect-synced-repository-names)))
+    (member repository repo-headers)))
+
+(defun ogi--insert-repo-header (repository)
+  "Append a level 1 header for REPOSITORY into `org-github-issues-org-file'."
+  (save-excursion
+    (with-temp-buffer
+      (insert (concat "\n"
+                      (org-element-interpret-data
+                       `(headline (:title ,repository :level 1)
+                                  ,(format "https://github.com/%s" repository)))))
+      (append-to-file (point-min)
+                      (point-max)
+                      org-github-issues-org-file))))
+
 (defun ogi--collect-synced-repository-names ()
   "Return a list of potential repository names from `org-github-issues-org-file'."
   (let ((repo-regex "[^\s]+/[^\s]+"))
@@ -84,15 +101,15 @@
   "Return a string of org tags based on labels from ISSUE."
   (mapcar (lambda (label) (oref label name)) (oref issue labels)))
 
-(defun ogi--create-org-entry (depth owner repo issue)
-  "Return a string representation of an org entry generated from headling level DEPTH, OWNER, REPO, ISSUE."
+(defun ogi--create-org-entry (owner repo issue)
+  "Return a string representation of a level 2 org TODO headline based on OWNER, REPO, ISSUE."
   (let* ((title (oref issue title))
          (number (oref issue number))
          (body (oref issue body))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
          (params (list :title (format "#%d: %s" number title)
-                       :level depth
+                       :level 2
                        :todo-keyword "TODO")))
     (org-element-interpret-data
      `(headline ,(if tags
@@ -128,17 +145,9 @@
   (org-find-exact-heading-in-directory headline
                                        (file-name-directory org-github-issues-org-file)))
 
-(defun ogi--get-issue-headline-level (headline)
-  "Return the subtree level for issues under HEADLINE."
-  (let ((pos (ogi--get-org-file-headline-position headline)))
-    (save-excursion
-      (with-current-buffer (marker-buffer pos)
-        (goto-char pos)
-        (1+ (org-current-level))))))
-
-(defun ogi--generate-org-entries (depth owner repo issues)
-  "Create entries based on DEPTH, OWNER and REPO from ISSUES."
-  (mapcar (-partial 'ogi--create-org-entry depth owner repo) issues))
+(defun ogi--generate-org-entries (owner repo issues)
+  "Create entries based on OWNER and REPO from ISSUES."
+  (mapcar (-partial 'ogi--create-org-entry owner repo) issues))
 
 (defun ogi--insert-org-entries (entries headline)
   "Insert ENTRIES under HEADLINE."
@@ -172,12 +181,18 @@ Executing this function will replace already downloaded issues."
                           nil nil)))
   (let* ((owner-and-repo (split-string repository "/"))
          (owner (car owner-and-repo))
-         (repo (cadr owner-and-repo)))
-    (ogi--delete-existing-issues owner repo)
-    (let* ((issues (ogi--fetch-issues owner repo))
-           (level (ogi--get-issue-headline-level repository))
-           (entries (ogi--generate-org-entries level owner repo issues)))
-      (ogi--insert-org-entries entries repository))))
+         (repo (cadr owner-and-repo))
+         (issues (ogi--fetch-issues owner repo)))
+    (when (not (ogi--repo-header-exists-p repository))
+      (progn
+        (message "Creating headline for %s in %s" repository org-github-issues-org-file)
+        (ogi--insert-repo-header repository)))
+    (if (not issues)
+        (message (format "No open issues found in repository https://github.com/%s" repository))
+      (progn
+        (ogi--delete-existing-issues owner repo)
+        (ogi--insert-org-entries (ogi--generate-org-entries owner repo issues)
+                                 repository)))))
 
 (provide 'org-github-issues)
 ;;; org-github-issues.el ends here
