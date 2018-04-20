@@ -73,7 +73,9 @@
       (insert (concat "\n"
                       (org-element-interpret-data
                        `(headline (:title ,repository :level 1)
-                                  ,(format "https://github.com/%s" repository)))))
+                                  (property-drawer nil
+                                                   ((node-property (:key "CATEGORY" :value ,repository))
+                                                    (node-property (:key "GH_URL" :value ,(format "https://github.com/%s" repository)))))))))
       (append-to-file (point-min)
                       (point-max)
                       org-github-issues-org-file))))
