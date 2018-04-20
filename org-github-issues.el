@@ -4,7 +4,7 @@
 
 ;; Author: Jens Östlund <jostlund@gmail.com>
 ;; Keywords: tools
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; URL: https://github.com/iensu/org-github-issues
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -73,7 +73,9 @@
       (insert (concat "\n"
                       (org-element-interpret-data
                        `(headline (:title ,repository :level 1)
-                                  ,(format "https://github.com/%s" repository)))))
+                                  (property-drawer nil
+                                                   ((node-property (:key "CATEGORY" :value ,repository))
+                                                    (node-property (:key "GH_URL" :value ,(format "https://github.com/%s" repository)))))))))
       (append-to-file (point-min)
                       (point-max)
                       org-github-issues-org-file))))
@@ -186,7 +188,8 @@ Executing this function will replace already downloaded issues."
     (when (not (ogi--repo-header-exists-p repository))
       (progn
         (message "Creating headline for %s in %s" repository org-github-issues-org-file)
-        (ogi--insert-repo-header repository)))
+        (ogi--insert-repo-header repository)
+        (sleep-for 1))) ; wait for file to be fully updated before adding issues
     (if (not issues)
         (message (format "No open issues found in repository https://github.com/%s" repository))
       (progn
