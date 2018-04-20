@@ -188,7 +188,8 @@ Executing this function will replace already downloaded issues."
     (when (not (ogi--repo-header-exists-p repository))
       (progn
         (message "Creating headline for %s in %s" repository org-github-issues-org-file)
-        (ogi--insert-repo-header repository)))
+        (ogi--insert-repo-header repository)
+        (sleep-for 1))) ; wait for file to be fully updated before adding issues
     (if (not issues)
         (message (format "No open issues found in repository https://github.com/%s" repository))
       (progn
