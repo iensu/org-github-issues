@@ -107,6 +107,7 @@
   "Return a string representation of a level 2 org TODO headline based on OWNER, REPO, ISSUE."
   (let* ((title (oref issue title))
          (number (oref issue number))
+         (assignee (oref (oref issue assignee) login))
          (body (oref issue body))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
@@ -120,7 +121,9 @@
                 (property-drawer nil ((node-property (:key "GH_URL" :value ,link))
                                       (node-property (:key "GH_OWNER" :value ,owner))
                                       (node-property (:key "GH_REPO" :value ,repo))
-                                      (node-property (:key "GH_ISSUE_NO" :value ,number))))
+                                      (node-property (:key "GH_ISSUE_NO" :value ,number))
+                                      (node-property (:key "GH_ASSIGNE" :value ,assignee))
+                                      ))
                 ,body))))
 
 (defun ogi--delete-org-entry ()
