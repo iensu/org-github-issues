@@ -44,6 +44,17 @@
   :type '(file :must-match t)
   :group 'org-github-issues)
 
+(defcustom org-github-issues-filter-by-assignee nil
+  "Flag to enable filtering issues by assignee."
+  :type 'boolean
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-assignee user-login-name
+  "The asignee to use for issue filtering."
+  :type 'string
+  :group 'org-github-issues)
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -114,17 +125,17 @@
          (params (list :title (format "#%d: %s" number title)
                        :level 2
                        :todo-keyword "TODO")))
-    (org-element-interpret-data
-     `(headline ,(if tags
-                     (append params (list :tags tags))
-                   params)
-                (property-drawer nil ((node-property (:key "GH_URL" :value ,link))
-                                      (node-property (:key "GH_OWNER" :value ,owner))
-                                      (node-property (:key "GH_REPO" :value ,repo))
-                                      (node-property (:key "GH_ISSUE_NO" :value ,number))
-                                      (node-property (:key "GH_ASSIGNE" :value ,assignee))
-                                      ))
-                ,body))))
+      (org-element-interpret-data
+       `(headline ,(if tags
+                       (append params (list :tags tags))
+                     params)
+                  (property-drawer nil ((node-property (:key "GH_URL" :value ,link))
+                                        (node-property (:key "GH_OWNER" :value ,owner))
+                                        (node-property (:key "GH_REPO" :value ,repo))
+                                        (node-property (:key "GH_ISSUE_NO" :value ,number))
+                                        (node-property (:key "GH_ASSIGNE" :value ,assignee))
+                                        ))
+                  ,body))))
 
 (defun ogi--delete-org-entry ()
   "Delete org entry at point until the next headline."
@@ -150,9 +161,15 @@
   (org-find-exact-heading-in-directory headline
                                        (file-name-directory org-github-issues-org-file)))
 
+(defun ogi--issue-include-p (issue)
+  "Predicate that returns non-nil when ISSUE should be included."
+  (let ((assignee (oref (oref issue assignee) login)))
+    (or (not org-github-issues-filter-by-assignee)
+              (and org-github-issues-filter-by-assignee (string= assignee org-github-issues-assignee)))))
+
 (defun ogi--generate-org-entries (owner repo issues)
   "Create entries based on OWNER and REPO from ISSUES."
-  (mapcar (-partial 'ogi--create-org-entry owner repo) issues))
+  (mapcar (-partial 'ogi--create-org-entry owner repo) (seq-filter 'ogi--issue-include-p issues)))
 
 (defun ogi--insert-org-entries (entries headline)
   "Insert ENTRIES under HEADLINE."
