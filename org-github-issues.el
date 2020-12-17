@@ -213,7 +213,7 @@
     (or (not org-github-issues-filter-by-assignee)
               (and org-github-issues-filter-by-assignee (string= assignee org-github-issues-assignee)))))
 
-(defun ogi--generate-org-entries (owner repo issues)
+(defun ogi--generate-org-entries (owner repo level issues)
   "Create entries based on OWNER and REPO from ISSUES."
   (mapcar (-partial 'ogi--create-org-entry owner repo level) (seq-filter 'ogi--issue-include-p issues)))
 
