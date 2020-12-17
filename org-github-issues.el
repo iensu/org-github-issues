@@ -49,6 +49,11 @@
   :type 'boolean
   :group 'org-github-issues)
 
+(defcustom org-github-issues-headline-prefix nil
+  "Flag to enable prefixing headlines with the repostiory name."
+  :type 'boolean
+  :group 'org-github-issues)
+
 (defcustom org-github-issues-assignee user-login-name
   "The asignee to use for issue filtering."
   :type 'string
@@ -151,7 +156,7 @@
          (body (oref issue body))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
-         (params (list :title (format "#%d: %s" number title)
+         (params (list :title (if org-github-issues-headline-prefix (format "%s: #%d: %s" repo number title) (format "#%d: %s" number title))
                        :level (+ level 1)
                        :todo-keyword "TODO")))
       (org-element-interpret-data
