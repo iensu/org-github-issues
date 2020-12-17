@@ -54,6 +54,30 @@
   :type 'string
   :group 'org-github-issues)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Repository structure
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun ogi--repository-create  (name level tags)
+  "Create a repository entry with the specified NAME LEVEL and TAGS."
+  (list name level tags))
+
+(defun ogi--repository-name  (repo)
+  "Get the repository name."
+  (nth 0 repo))
+
+(defun ogi--repository-level  (repo)
+  "Get the repository level."
+  (nth 1 repo))
+
+(defun ogi--repository-tags  (repo)
+  "Get the repository tags."
+  (nth 2 repo))
+
+(defun ogi--repository-named  (repositories name)
+  "Get the first repository from REPOSITORIES with a matching NAME, or nil if there is no match."
+  (let* ((filtered (seq-filter (lambda (r) (string= name (ogi--repository-name r))) repositories)))
+    (if filtered (car filtered) nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper functions
@@ -92,7 +116,11 @@
                       org-github-issues-org-file))))
 
 (defun ogi--collect-synced-repository-names ()
-  "Return a list of potential repository names from `org-github-issues-org-file'."
+  "Return a list of potential repositories nanes from `org-github-issues-org-file'."
+  (mapcar 'ogi--repository-name (ogi--collect-synced-repositories)))
+
+(defun ogi--collect-synced-repositories ()
+  "Return a list of potential repositories from `org-github-issues-org-file'."
   (let ((repo-regex "[^\s]+/[^\s]+"))
     (save-excursion
       (with-temp-buffer
@@ -100,10 +128,11 @@
         (org-mode)
         (org-element-map (org-element-parse-buffer 'headline) 'headline
           (lambda (hl)
-            (let ((title (car (split-string (org-element-property :title hl) " "))))
-              (when (and (eq (org-element-property :level hl) 1)
-                         (string-match-p repo-regex title))
-                title))))))))
+            (let ((title (car (split-string (org-element-property :title hl) " ")))
+                  (level (org-element-property :level hl))
+                  (tags (org-element-property :tags hl)))
+              (when (string-match-p repo-regex title)
+                (ogi--repository-create title level tags)))))))))
 
 (defun ogi--issue-url (owner repo number)
   "Return url to issue based on OWNER, REPO and issue NUMBER."
@@ -114,8 +143,8 @@
   "Return a string of org tags based on labels from ISSUE."
   (mapcar (lambda (label) (oref label name)) (oref issue labels)))
 
-(defun ogi--create-org-entry (owner repo issue)
-  "Return a string representation of a level 2 org TODO headline based on OWNER, REPO, ISSUE."
+(defun ogi--create-org-entry (owner repo level issue)
+  "Return a string representation of a LEVEL+1 org TODO headline based on OWNER, REPO, ISSUE."
   (let* ((title (oref issue title))
          (number (oref issue number))
          (assignee (oref (oref issue assignee) login))
@@ -123,7 +152,7 @@
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
          (params (list :title (format "#%d: %s" number title)
-                       :level 2
+                       :level (+ level 1)
                        :todo-keyword "TODO")))
       (org-element-interpret-data
        `(headline ,(if tags
@@ -169,7 +198,7 @@
 
 (defun ogi--generate-org-entries (owner repo issues)
   "Create entries based on OWNER and REPO from ISSUES."
-  (mapcar (-partial 'ogi--create-org-entry owner repo) (seq-filter 'ogi--issue-include-p issues)))
+  (mapcar (-partial 'ogi--create-org-entry owner repo level) (seq-filter 'ogi--issue-include-p issues)))
 
 (defun ogi--insert-org-entries (entries headline)
   "Insert ENTRIES under HEADLINE."
@@ -201,9 +230,13 @@ Executing this function will replace already downloaded issues."
    (list (completing-read "Github repo: "
                           (ogi--collect-synced-repository-names)
                           nil nil)))
-  (let* ((owner-and-repo (split-string repository "/"))
+  (let* ((repositories (ogi--collect-synced-repositories))
+         (owner-and-repo (split-string repository "/"))
          (owner (car owner-and-repo))
          (repo (cadr owner-and-repo))
+         (selected (ogi--repository-named repositories repository))
+         (level (ogi--repository-level selected))
+         (tags (ogi--repository-tags selected))
          (issues (ogi--fetch-issues owner repo)))
     (when (not (ogi--repo-header-exists-p repository))
       (progn
@@ -214,7 +247,7 @@ Executing this function will replace already downloaded issues."
         (message (format "No open issues found in repository https://github.com/%s" repository))
       (progn
         (ogi--delete-existing-issues owner repo)
-        (ogi--insert-org-entries (ogi--generate-org-entries owner repo issues)
+        (ogi--insert-org-entries (ogi--generate-org-entries owner repo level issues)
                                  repository)))))
 
 (provide 'org-github-issues)

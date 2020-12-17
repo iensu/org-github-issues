@@ -9,8 +9,22 @@ A helper function to create org-mode TODOs out of open issues in a github reposi
 Before use you need to set the variable `org-github-issues-org-file` to point to an existing
 file in which to write the fetched issues.
 
-In the specified file, create a header for your github project, .e.g `iensu/org-github-issues`.
-The header must match the repository name (OWNER/REPO) **exactly**.
+In the specified file, create a header for each of your github projects, .e.g `iensu/org-github-issues`.
+Each header must match the repository name (OWNER/REPO) **exactly**.
+
+Each header can be a top level header or nested and may optionally contain tags:
+
+```org
+* Emacs
+** iensu/org-github-issues
+** sigma/gh
+** magit/forge                :magit:
+** magit/magit                :magit:
+* Other projects
+** foo/bar
+```
+
+Any header that doesn't match the (OWNER/REPO) pattern will be ignored.
 
 After setup you can run `M-x org-github-issues-sync-issues`, which will prompt you for the repository
 you want to fetch issues for.
