@@ -64,6 +64,11 @@
   :type 'string
   :group 'org-github-issues)
 
+(defcustom org-github-issues-tag-transformations '(("[\s/-]+" "_"))
+  "An alist with transformation to apply to github labels when converting them to org-mode tags."
+  :type '(alist :value-type (group string))
+  :group 'org-github-issues)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Repository structure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -151,7 +156,16 @@
 
 (defun ogi--labels-to-tags (issue)
   "Return a string of org tags based on labels from ISSUE."
-  (mapcar (lambda (label) (replace-regexp-in-string "[\s-]+" "_" (oref label name))) (oref issue labels))) ;;Replace chars that are invalid for tags
+  (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels))) ;;Replace chars that are invalid for tags
+
+(defun ogi--replace-multi-regexp-in-string(s mappings)
+  "Replace multiple replace-regexp-in-string in a pipeline fashion (Feed the result of each step as input to the next)."
+  (let ((result s))
+    (dolist (m mappings)
+      (let ((regexp (car m))
+            (to-replace (car (cdr m))))
+      (setq result (replace-regexp-in-string regexp to-replace result))))
+    result))
 
 (defun ogi--scheduled-property (level)
   "Return the scheduled string property."
