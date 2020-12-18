@@ -106,9 +106,10 @@
   "Return a list of gh-issues-issue objects from OWNER/REPO over CONNECTION."
   (let ((conn (or connection
                   (ogi--connect))))
-    (oref (gh-issues-issue-list conn
-                                owner
-                                repo)
+    (oref (ogi--issues-issue-list conn
+                                  owner
+                                  repo
+                                  (if (and org-github-issues-filter-by-assignee org-github-issues-assignee) org-github-issues-assignee nil))
           data)))
 
 (defun ogi--repo-header-exists-p (repository)
@@ -242,6 +243,19 @@
         (insert "\n")
         (insert body)
         (insert "\n")))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rest methods
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod ogi--issues-issue-list ((api gh-issues-api) user repo &optional assignee)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api issue-cls)) "GET"
+   (if assignee
+       (format "/repos/%s/%s/issues?assignee=%s" user repo assignee)
+     (format "/repos/%s/%s/issues" user repo))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public functions
