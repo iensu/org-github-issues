@@ -49,14 +49,14 @@
   :type 'boolean
   :group 'org-github-issues)
 
+(defcustom org-github-issues-assignee user-login-name
+  "The assignee to use for issue filtering."
+  :type 'string
+  :group 'org-github-issues)
+
 (defcustom org-github-issues-headline-prefix nil
   "Flag to enable prefixing headlines with the repostiory name."
   :type 'boolean
-  :group 'org-github-issues)
-
-(defcustom org-github-issues-assignee user-login-name
-  "The asignee to use for issue filtering."
-  :type 'string
   :group 'org-github-issues)
 
 (defcustom org-github-issues-auto-schedule "+0d"
