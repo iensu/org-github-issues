@@ -4,6 +4,27 @@
 
 A helper function to create org-mode TODOs out of open issues in a github repository.
 
+## Installation
+
+### Using straight.el
+
+An example of how you can install this package using [straight.el](https://github.com/raxod502/straight.el):
+
+```org
+(use-package org-github-issues :straight (org-github-issues :host github :repo "iensu/org-github-issues")
+  :defer t
+  :config
+  (setq
+        github-repositories '("dekorateio/dekorate" "quarkusio/quarkus")                                                 ;; My repositories
+        org-github-issues-org-file "~/Documents/org/github.org"                                                          ;; My org file
+        org-github-issues-tags '("github" "triage")                                                                      ;; Always add these labels
+        org-github-issues-auto-schedule "+0d"                                                                            ;; Enable automatic scheduling
+        org-github-issues-filter-by-assignee t                                                                           ;; Enable filter by assignee
+        org-github-issues-headline-prefix t)                                                                             ;; Prefix all headlines with repository name
+  (mapcar (lambda (r) (run-with-idle-timer 3600 t (lambda () (org-github-issues-sync-issues r)))) github-repositories))  ;; When idle for an hour loop over my projects and sync
+```
+
+
 ## Usage
 
 Before use you need to set the variable `org-github-issues-org-file` to point to an existing
@@ -28,3 +49,19 @@ Any header that doesn't match the (OWNER/REPO) pattern will be ignored.
 
 After setup you can run `M-x org-github-issues-sync-issues`, which will prompt you for the repository
 you want to fetch issues for.
+
+
+## Customization
+
+The following custom options are available:
+
+| Option                               | Type                             | Description                                                                          | Default Value                |
+|--------------------------------------|----------------------------------|--------------------------------------------------------------------------------------|------------------------------|
+| org-github-issues-org-file           | string                           | Path to an existing `org-mode` file in which to write issues                         | "~/Dropbox/org/projects.org" |
+| org-github-issues-filter-by-assignee | boolean                          | Flag to enable filtering issues by assignee.                                         | nil                          |
+| org-github-issues-assignee           | string                           | The assignee to use for filtering                                                    | `user-login-name`            |
+| org-github-issues-headline-prefix    | boolean                          | Flag to enable prefixing headlines with the repository name                          | nil                          |
+| org-github-issues-auto-schedule      | string                           | Threshold for automatically scheduling new issues                                    | "+0d"                        |
+| org-github-tag-transformations       | alsit :value-type (group-string) | An alsit with trasnformations to apply to github labels when converting them to tags | '(("[\s/-]+" "_")            |
+
+

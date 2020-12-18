@@ -49,19 +49,24 @@
   :type 'boolean
   :group 'org-github-issues)
 
+(defcustom org-github-issues-assignee user-login-name
+  "The assignee to use for issue filtering."
+  :type 'string
+  :group 'org-github-issues)
+
 (defcustom org-github-issues-headline-prefix nil
   "Flag to enable prefixing headlines with the repostiory name."
   :type 'boolean
   :group 'org-github-issues)
 
-(defcustom org-github-issues-assignee user-login-name
-  "The asignee to use for issue filtering."
-  :type 'string
-  :group 'org-github-issues)
-
 (defcustom org-github-issues-auto-schedule "+0d"
   "Threshold for automatically scheduling new issues."
   :type 'string
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-tag-transformations '(("[\s/-]+" "_"))
+  "An alist with transformation to apply to github labels when converting them to org-mode tags."
+  :type '(alist :value-type (group string))
   :group 'org-github-issues)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,9 +106,10 @@
   "Return a list of gh-issues-issue objects from OWNER/REPO over CONNECTION."
   (let ((conn (or connection
                   (ogi--connect))))
-    (oref (gh-issues-issue-list conn
-                                owner
-                                repo)
+    (oref (ogi--issues-issue-list conn
+                                  owner
+                                  repo
+                                  (if (and org-github-issues-filter-by-assignee org-github-issues-assignee) org-github-issues-assignee nil))
           data)))
 
 (defun ogi--repo-header-exists-p (repository)
@@ -151,7 +157,16 @@
 
 (defun ogi--labels-to-tags (issue)
   "Return a string of org tags based on labels from ISSUE."
-  (mapcar (lambda (label) (replace-regexp-in-string "[\s-]+" "_" (oref label name))) (oref issue labels))) ;;Replace chars that are invalid for tags
+  (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels))) ;;Replace chars that are invalid for tags
+
+(defun ogi--replace-multi-regexp-in-string(s mappings)
+  "Replace multiple replace-regexp-in-string in a pipeline fashion (Feed the result of each step as input to the next)."
+  (let ((result s))
+    (dolist (m mappings)
+      (let ((regexp (car m))
+            (to-replace (car (cdr m))))
+      (setq result (replace-regexp-in-string regexp to-replace result))))
+    result))
 
 (defun ogi--scheduled-property (level)
   "Return the scheduled string property."
@@ -228,6 +243,19 @@
         (insert "\n")
         (insert body)
         (insert "\n")))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rest methods
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod ogi--issues-issue-list ((api gh-issues-api) user repo &optional assignee)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api issue-cls)) "GET"
+   (if assignee
+       (format "/repos/%s/%s/issues?assignee=%s" user repo assignee)
+     (format "/repos/%s/%s/issues" user repo))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public functions
