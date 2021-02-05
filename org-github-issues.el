@@ -262,6 +262,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;###autoload
+(defun org-github-issues-browse-entry-at-point ()
+  "Browse the issue that corresponds to the org entry at point."
+  (interactive)
+  (let ((origin (current-buffer)))
+    (when (eq major-mode 'org-agenda-mode) (org-agenda-switch-to))
+    (let* ((p (point))
+           (url (string-trim (org-entry-get nil "GH_URL"))))
+      (when url (browse-url url))
+      (when (not (equal origin (current-buffer))) (switch-to-buffer origin)))))
+
+;;;###autoload
 (defun org-github-issues-sync-issues (repository)
   "Fetch and insert all open issues from github REPOSITORY.
 
