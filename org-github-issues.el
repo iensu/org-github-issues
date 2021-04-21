@@ -64,6 +64,11 @@
   :type 'string
   :group 'org-github-issues)
 
+(defcustom org-github-issues-tags nil
+  "An alist of org-mode tags."
+  :type '(alist :value-type (group string))
+  :group 'org-github-issues)
+
 (defcustom org-github-issues-tag-transformations '(("[\s/-]+" "_"))
   "An alist with transformation to apply to github labels when converting them to org-mode tags."
   :type '(alist :value-type (group string))
