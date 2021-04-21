@@ -39,6 +39,18 @@
   "Tool for creating org-mode todos out of Github issues"
   :group 'tools)
 
+(defcustom org-github-issues-user nil
+  "Github username with which you authenticate to Github."
+  :type 'string
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-token nil
+  "Github Personal Access Token to use for authentication.
+
+This variable exists purely for convenience and should be avoided. Please use `auth-sources' as described in the README instead."
+  :type 'string
+  :group 'org-github-issues)
+
 (defcustom org-github-issues-org-file "~/Dropbox/org/projects.org"
   "Path to an existing `org-mode' file in which to write issues."
   :type '(file :must-match t)
@@ -103,9 +115,24 @@
 ;; Helper functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun ogi--get-auth-token (username)
+  "Returns Github Personal Access Token from `auth-sources' or `org-github-issues-token' if it exists."
+  (if org-github-issues-token
+      org-github-issues-token
+    (let* ((auth-entries (auth-source-search :host "org-github-issues"
+                                             :user username
+                                             :max 1))
+           (secret       (plist-get (car auth-entries) :secret)))
+      (if (functionp secret)
+          (funcall secret)
+        secret))))
+
 (defun ogi--connect ()
   "Return a Github Issues api connection."
-  (gh-issues-api "API"))
+  (if org-github-issues-user
+      (gh-issues-api "api" :auth (gh-oauth-authenticator :username org-github-issues-user
+                                                         :token (ogi--get-auth-token org-github-issues-user)))
+    (gh-issues-api "api")))
 
 (defun ogi--fetch-issues (owner repo &optional connection)
   "Return a list of gh-issues-issue objects from OWNER/REPO over CONNECTION."
