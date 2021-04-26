@@ -14,7 +14,7 @@ An example of how you can install this package using [straight.el](https://githu
 (use-package org-github-issues :straight (org-github-issues :host github :repo "iensu/org-github-issues")
   :defer t
   :config
-  (setq
+  (setq org-github-issues-user "iensu"                                                                                   ;; Specify Github user
         github-repositories '("dekorateio/dekorate" "quarkusio/quarkus")                                                 ;; My repositories
         org-github-issues-org-file "~/Documents/org/github.org"                                                          ;; My org file
         org-github-issues-tags '("github" "triage")                                                                      ;; Always add these labels
@@ -27,8 +27,7 @@ An example of how you can install this package using [straight.el](https://githu
 
 ## Usage
 
-Before use you need to set the variable `org-github-issues-org-file` to point to an existing
-file in which to write the fetched issues.
+Before use you need to set the variable `org-github-issues-org-file` to point to an existing file in which to write the fetched issues.
 
 In the specified file, create a header for each of your github projects, .e.g `iensu/org-github-issues`.
 Each header must match the repository name (OWNER/REPO) **exactly**.
@@ -50,6 +49,19 @@ Any header that doesn't match the (OWNER/REPO) pattern will be ignored.
 After setup you can run `M-x org-github-issues-sync-issues`, which will prompt you for the repository
 you want to fetch issues for.
 
+## Authentication
+
+If you are experiencing authentication issues you need to set `org-github-issues-user` to the user you want to authenticate with and then [create a Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token).
+
+If you want to track private repositories you will need to select the **repo** scope and **org:read** if you want to also read repositories belonging to your organizations. See [this issue](https://github.com/octokit/octokit.net/issues/1775) for more info.
+
+You can provide the token by using `auth-sources` and add an entry to your `~/.authinfo.gpg` file ([this article](https://www.masteringemacs.org/article/keeping-secrets-in-emacs-gnupg-auth-sources) gives a good introduction to working with `auth-sources`):
+
+```
+machine org-github-issues login <USERNAME> password <TOKEN>
+```
+
+The less secure way is to set `org-github-issues-token`, but please go with the `auth-sources` option if your token has access to private repositories.
 
 ## Customization
 
