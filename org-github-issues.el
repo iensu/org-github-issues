@@ -209,7 +209,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
   (let* ((title (oref issue title))
          (number (oref issue number))
          (assignee (oref (oref issue assignee) login))
-         (body (oref issue body))
+         (body (replace-regexp-in-string "^[\*]+" " - " (oref issue body)))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
          (scheduled (ogi--scheduled-property level))
