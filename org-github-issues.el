@@ -4,7 +4,7 @@
 
 ;; Author: Jens Östlund <jostlund@gmail.com>
 ;; Keywords: tools
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; URL: https://github.com/iensu/org-github-issues
 
 ;; This program is free software; you can redistribute it and/or modify
