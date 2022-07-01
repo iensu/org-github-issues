@@ -61,8 +61,8 @@ This variable exists purely for convenience and should be avoided. Please use `a
   :type 'boolean
   :group 'org-github-issues)
 
-(defcustom org-github-issues-assignee user-login-name
-  "The assignee to use for issue filtering."
+(defcustom org-github-issues-assignee nil
+  "The assignee to use for issue filtering if different from `org-github-issuess-user'."
   :type 'string
   :group 'org-github-issues)
 
