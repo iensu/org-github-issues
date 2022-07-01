@@ -4,7 +4,7 @@
 
 ;; Author: Jens Östlund <jostlund@gmail.com>
 ;; Keywords: tools
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; URL: https://github.com/iensu/org-github-issues
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -61,8 +61,8 @@ This variable exists purely for convenience and should be avoided. Please use `a
   :type 'boolean
   :group 'org-github-issues)
 
-(defcustom org-github-issues-assignee user-login-name
-  "The assignee to use for issue filtering."
+(defcustom org-github-issues-assignee nil
+  "The assignee to use for issue filtering if different from `org-github-issuess-user'."
   :type 'string
   :group 'org-github-issues)
 
@@ -141,7 +141,11 @@ This variable exists purely for convenience and should be avoided. Please use `a
     (oref (ogi--issues-issue-list conn
                                   owner
                                   repo
-                                  (if (and org-github-issues-filter-by-assignee org-github-issues-assignee) org-github-issues-assignee nil))
+                                  (if (and org-github-issues-filter-by-assignee
+                                           (or org-github-issues-assignee
+                                               org-github-issues-user))
+                                      (or org-github-issues-assignee org-github-issues-user)
+                                    nil))
           data)))
 
 (defun ogi--repo-header-exists-p (repository)
@@ -258,7 +262,8 @@ This variable exists purely for convenience and should be avoided. Please use `a
   "Predicate that returns non-nil when ISSUE should be included."
   (let ((assignee (oref (oref issue assignee) login)))
     (or (not org-github-issues-filter-by-assignee)
-              (and org-github-issues-filter-by-assignee (string= assignee org-github-issues-assignee)))))
+        (and org-github-issues-filter-by-assignee (string= assignee (or org-github-issues-assignee
+                                                                        org-github-issues-user))))))
 
 (defun ogi--generate-org-entries (owner repo level issues)
   "Create entries based on OWNER and REPO from ISSUES."
