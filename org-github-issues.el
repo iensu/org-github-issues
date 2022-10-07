@@ -369,6 +369,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
   "Insert ENTRIES under HEADLINE."
   (let ((body (if entries (string-join entries "\n") nil))
         (pos (ogi--get-org-file-headline-position headline)))
+    (setq body (replace-regexp-in-string "\r" "" body))
     (save-excursion
       (with-current-buffer (marker-buffer pos)
         (goto-char pos)
