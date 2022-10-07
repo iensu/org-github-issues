@@ -238,7 +238,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
 
 (defun ogi--labels-to-tags (issue)
   "Return a string of org tags based on labels from ISSUE."
-  (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels))) ;;Replace chars that are invalid for tags
+  (seq-filter (lambda (s) (and s (not (string= "" s)))) (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels)))) ;;Replace chars that are invalid for tags
 
 (defun ogi--replace-multi-regexp-in-string(s mappings)
   "Replace multiple replace-regexp-in-string in a pipeline fashion (Feed the result of each step as input to the next)."
@@ -267,6 +267,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
                        :todo-keyword "TODO")))
       (when org-github-issues-tags (setq tags (append org-github-issues-tags tags)))
       (when org-github-issues-issue-tags (setq tags (append org-github-issues-issue-tags tags)))
+      (setq tags (seq-filter (lambda (s) (and s (not (string= "" s)))) (delete-dups tags)))
       (org-element-interpret-data
        `(headline ,(if tags
                        (append params (list :tags tags))
@@ -294,6 +295,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
                        :todo-keyword "TODO")))
       (when org-github-issues-tags (setq tags (append org-github-issues-tags tags)))
       (when org-github-issues-pull-tags (setq tags (append org-github-issues-pull-tags tags)))
+      (setq tags (seq-filter (lambda (s) (and s (not (string= "" s)))) (delete-dups tags)))
       (org-element-interpret-data
        `(headline ,(if tags
                        (append params (list :tags tags))
