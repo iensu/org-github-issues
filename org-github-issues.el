@@ -77,7 +77,17 @@ This variable exists purely for convenience and should be avoided. Please use `a
   :group 'org-github-issues)
 
 (defcustom org-github-issues-tags nil
-  "An alist of org-mode tags."
+  "An alist of org-mode tags to add to all org entries."
+  :type '(alist :value-type (group string))
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-issue-tags nil
+  "An alist of org-mode tags to add to entries corresponding to issues."
+  :type '(alist :value-type (group string))
+  :group 'org-github-issues)
+
+(defcustom org-github-issues-pull-tags nil
+  "An alist of org-mode tags to add to entries corresponding to pull requests."
   :type '(alist :value-type (group string))
   :group 'org-github-issues)
 
@@ -133,6 +143,36 @@ This variable exists purely for convenience and should be avoided. Please use `a
       (gh-issues-api "api" :auth (gh-oauth-authenticator :username org-github-issues-user
                                                          :token (ogi--get-auth-token org-github-issues-user)))
     (gh-issues-api "api")))
+
+
+(defun ogi--pulls-connect ()
+  "Return a Github Issues api connection."
+  (if org-github-issues-user
+      (gh-pulls-api "api" :auth (gh-oauth-authenticator :username org-github-issues-user
+                                                         :token (ogi--get-auth-token org-github-issues-user)))
+    (gh-pulls-api "api")))
+
+(defun ogi--fetch-pulls (owner repo &optional connection)
+  "Return a list of gh-issues-pull objects from OWNER/REPO over CONNECTION."
+  (let ((conn (or connection
+                  (ogi--pulls-connect))))
+    (delete-dups
+     (append
+      ;; Get pull requests assigned
+      (oref (ogi--pulls-pull-list conn
+                                  owner
+                                  repo
+                                  (if (and org-github-issues-filter-by-assignee
+                                           (or org-github-issues-assignee
+                                               org-github-issues-user))
+                                      (or org-github-issues-assignee org-github-issues-user)
+                                    nil))
+            data)
+      ;; Get pull requests requested for review
+      (oref (ogi--pulls-pull-list conn
+                                  owner
+                                  repo)
+            data)))))
 
 (defun ogi--fetch-issues (owner repo &optional connection)
   "Return a list of gh-issues-issue objects from OWNER/REPO over CONNECTION."
@@ -191,9 +231,14 @@ This variable exists purely for convenience and should be avoided. Please use `a
   (format "https://github.com/%s/%s/issues/%d"
           owner repo number))
 
+(defun ogi--pull-url (owner repo number)
+  "Return url to issue based on OWNER, REPO and issue NUMBER."
+  (format "https://github.com/%s/%s/pulls/%d"
+          owner repo number))
+
 (defun ogi--labels-to-tags (issue)
   "Return a string of org tags based on labels from ISSUE."
-  (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels))) ;;Replace chars that are invalid for tags
+  (seq-filter (lambda (s) (and s (not (string= "" s)))) (mapcar (lambda (label) (ogi--replace-multi-regexp-in-string (oref label name) org-github-issues-tag-transformations)) (oref issue labels)))) ;;Replace chars that are invalid for tags
 
 (defun ogi--replace-multi-regexp-in-string(s mappings)
   "Replace multiple replace-regexp-in-string in a pipeline fashion (Feed the result of each step as input to the next)."
@@ -208,12 +253,12 @@ This variable exists purely for convenience and should be avoided. Please use `a
   "Return the scheduled string property."
   (if org-github-issues-auto-schedule (format "%s  SCHEDULED: <%s>\n" (make-string level 32) (org-read-date nil nil org-github-issues-auto-schedule)) nil))
 
-(defun ogi--create-org-entry (owner repo level issue)
+(defun ogi--create-org-entry-for-issue (owner repo level issue)
   "Return a string representation of a LEVEL+1 org TODO headline based on OWNER, REPO, ISSUE."
   (let* ((title (oref issue title))
          (number (oref issue number))
          (assignee (oref (oref issue assignee) login))
-         (body (replace-regexp-in-string "^[\*]+" " - " (oref issue body)))
+         (body (replace-regexp-in-string "^[\*]+" " - " (or (oref issue body) "")))
          (tags (ogi--labels-to-tags issue))
          (link (ogi--issue-url owner repo number))
          (scheduled (ogi--scheduled-property level))
@@ -221,6 +266,8 @@ This variable exists purely for convenience and should be avoided. Please use `a
                        :level (+ level 1)
                        :todo-keyword "TODO")))
       (when org-github-issues-tags (setq tags (append org-github-issues-tags tags)))
+      (when org-github-issues-issue-tags (setq tags (append org-github-issues-issue-tags tags)))
+      (setq tags (seq-filter (lambda (s) (and s (not (string= "" s)))) (delete-dups tags)))
       (org-element-interpret-data
        `(headline ,(if tags
                        (append params (list :tags tags))
@@ -230,6 +277,34 @@ This variable exists purely for convenience and should be avoided. Please use `a
                                         (node-property (:key "GH_OWNER" :value ,owner))
                                         (node-property (:key "GH_REPO" :value ,repo))
                                         (node-property (:key "GH_ISSUE_NO" :value ,number))
+                                        (node-property (:key "GH_ASSIGNE" :value ,assignee))
+                                        ))
+                  ,body))))
+
+(defun ogi--create-org-entry-for-pull (owner repo level pull)
+  "Return a string representation of a LEVEL+1 org TODO headline based on OWNER, REPO, ISSUE."
+  (let* ((title (oref pull title))
+         (number (oref pull number))
+         (assignee (oref (oref pull assignee) login))
+         (body (replace-regexp-in-string "^[\*]+" " - " (or (oref pull body) "")))
+         (tags (ogi--labels-to-tags pull))
+         (link (ogi--pull-url owner repo number))
+         (scheduled (ogi--scheduled-property level))
+         (params (list :title (if org-github-issues-headline-prefix (format "%s: #%d: %s" repo number title) (format "#%d: %s" number title))
+                       :level (+ level 1)
+                       :todo-keyword "TODO")))
+      (when org-github-issues-tags (setq tags (append org-github-issues-tags tags)))
+      (when org-github-issues-pull-tags (setq tags (append org-github-issues-pull-tags tags)))
+      (setq tags (seq-filter (lambda (s) (and s (not (string= "" s)))) (delete-dups tags)))
+      (org-element-interpret-data
+       `(headline ,(if tags
+                       (append params (list :tags tags))
+                     params)
+                  ,(if scheduled scheduled)
+                  (property-drawer nil ((node-property (:key "GH_URL" :value ,link))
+                                        (node-property (:key "GH_OWNER" :value ,owner))
+                                        (node-property (:key "GH_REPO" :value ,repo))
+                                        (node-property (:key "GH_PULL_NO" :value ,number))
                                         (node-property (:key "GH_ASSIGNE" :value ,assignee))
                                         ))
                   ,body))))
@@ -253,6 +328,14 @@ This variable exists purely for convenience and should be avoided. Please use `a
      match
      `(,org-github-issues-org-file))))
 
+(defun ogi--delete-existing-pulls (owner repo)
+  "Delete all previously created org entries matching OWNER and REPO."
+  (let ((match (format "+GH_OWNER={%s}+GH_REPO={%s}" owner repo)))
+    (org-map-entries
+     'ogi--delete-org-entry
+     match
+     `(,org-github-issues-org-file))))
+
 (defun ogi--get-org-file-headline-position (headline)
   "Return the marker for the given org HEADLINE."
   (org-find-exact-heading-in-directory headline
@@ -265,22 +348,36 @@ This variable exists purely for convenience and should be avoided. Please use `a
         (and org-github-issues-filter-by-assignee (string= assignee (or org-github-issues-assignee
                                                                         org-github-issues-user))))))
 
-(defun ogi--generate-org-entries (owner repo level issues)
+(defun ogi--pull-include-p (pull)
+  "Predicate that returns non-nil when PULL should be included."
+  (let ((assignee (oref (oref pull assignee) login))
+        (reviewers (mapcar (lambda (r) (oref r login)) (oref pull requested_reviewers))))
+    (or (not org-github-issues-filter-by-assignee)
+        (or (and assignee (string= assignee (or org-github-issues-assignee org-github-issues-user)))
+            (member (or org-github-issues-assignee org-github-issues-user) reviewers)))))
+
+(defun ogi--generate-org-entries-for-issues (owner repo level issues)
   "Create entries based on OWNER and REPO from ISSUES."
-  (mapcar (-partial 'ogi--create-org-entry owner repo level) (seq-filter 'ogi--issue-include-p issues)))
+  (mapcar (-partial 'ogi--create-org-entry-for-issue owner repo level) (seq-filter 'ogi--issue-include-p issues)))
+
+(defun ogi--generate-org-entries-for-pulls (owner repo level pulls)
+  "Create entries based on OWNER and REPO from PULLS."
+  (mapcar (-partial 'ogi--create-org-entry-for-pull owner repo level) (seq-filter 'ogi--pull-include-p pulls)))
+
 
 (defun ogi--insert-org-entries (entries headline)
   "Insert ENTRIES under HEADLINE."
-  (let ((body (string-join entries "\n"))
+  (let ((body (if entries (string-join entries "\n") nil))
         (pos (ogi--get-org-file-headline-position headline)))
+    (setq body (replace-regexp-in-string "\r" "" body))
     (save-excursion
       (with-current-buffer (marker-buffer pos)
         (goto-char pos)
         (outline-next-heading)
-        (insert "\n")
-        (insert body)
-        (insert "\n")))))
-
+        (when body
+          (insert "\n")
+          (insert body)
+          (insert "\n"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rest methods
@@ -293,6 +390,13 @@ This variable exists purely for convenience and should be avoided. Please use `a
        (format "/repos/%s/%s/issues?assignee=%s" user repo assignee)
      (format "/repos/%s/%s/issues" user repo))))
 
+(defmethod ogi--pulls-pull-list ((api gh-pulls-api) user repo &optional assignee)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api req-cls)) "GET"
+   (if assignee
+       (format "/repos/%s/%s/pulls?assignee=%s" user repo assignee)
+     (format "/repos/%s/%s/pulls?q=%s" user repo "is%3Apr+is%3Aopen+user-review-requested%3A%40me"))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public functions
@@ -300,7 +404,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
 
 ;;;###autoload
 (defun org-github-issues-browse-entry-at-point ()
-  "Browse the issue that corresponds to the org entry at point."
+  "Browse the issue/pull that corresponds to the org entry at point."
   (interactive)
   (let ((origin (current-buffer)))
     (when (eq major-mode 'org-agenda-mode) (org-agenda-switch-to))
@@ -340,8 +444,66 @@ Executing this function will replace already downloaded issues."
         (message (format "No open issues found in repository https://github.com/%s" repository))
       (progn
         (ogi--delete-existing-issues owner repo)
-        (ogi--insert-org-entries (ogi--generate-org-entries owner repo level issues)
+        (ogi--insert-org-entries (ogi--generate-org-entries-for-issues owner repo level issues)
                                  repository)))))
+
+(defun org-github-issues-sync-pulls (repository)
+  "Fetch and insert all open pulls awaiting review or assigned to the user from github REPOSITORY.
+
+Example: https://github.com/foo/bar, the repository is `foo/bar'
+
+Pulls will be put under the heading matching REPOSITORY in the file
+ specified by `org-github-pulls-org-file'.
+
+Executing this function will replace already downloaded issues."
+  (interactive
+   (list (completing-read "Github repo: "
+                          (ogi--collect-synced-repository-names)
+                          nil nil)))
+  (let* ((repositories (ogi--collect-synced-repositories))
+         (owner-and-repo (split-string repository "/"))
+         (owner (car owner-and-repo))
+         (repo (cadr owner-and-repo))
+         (selected (ogi--repository-named repositories repository))
+         (level (ogi--repository-level selected))
+         (tags (ogi--repository-tags selected))
+         (pulls (ogi--fetch-pulls owner repo)))
+    (when (not (ogi--repo-header-exists-p repository))
+      (progn
+        (message "Creating headline for %s in %s" repository org-github-issues-org-file)
+        (ogi--insert-repo-header repository)
+        (sleep-for 1))) ; wait for file to be fully updated before adding issues
+    (if (not pulls)
+        (message (format "No assigned/review pending pulls found in repository https://github.com/%s" repository))
+      (progn
+        (ogi--delete-existing-pulls owner repo)
+        (ogi--insert-org-entries (ogi--generate-org-entries-for-pulls owner repo level pulls)
+                                 repository)))))
+
+(defun org-github-issues-fetch-all ()
+  "Sync all github repository issues and pull requests."
+  (interactive)
+  (let ((repos (ogi--collect-synced-repository-names)))
+    (mapcar (lambda (r) (org-github-issues-sync-issues r)) repos)
+    (mapcar (lambda (r) (org-github-issues-sync-pulls r))  repos)))
+
+;; gh-pulls.el does not include requested_reviewers, assignee, assignees and labels, so that needs to change.
+(gh-defclass gh-pulls-request (gh-pulls-request-stub)
+  ((number :initarg :number)
+   (merged :initarg :merged)
+   (mergeable :initarg :mergeable)
+   (merged-by :initarg :merged-by)
+   (comments :initarg :comments)
+   (user :initarg :user :initform nil :marshal-type gh-user)
+   (labels :initarg :labels :initform nil :marshal-type (list gh-issues-label))
+   (assignees :initarg :assignees :initform nil :marshal-type (list gh-user))
+   (assignee :initarg :assignee :initform nil :marshal-type gh-user)
+   (requested_reviewers :initarg :assignees :initform nil :marshal-type (list gh-user))
+   (commits :initarg :commits)
+   (additions :initarg :additions)
+   (deletions :initarg :deletions)
+   (changed-files :initarg :changed-files))
+  "Git pull requests API")
 
 (provide 'org-github-issues)
 ;;; org-github-issues.el ends here
