@@ -74,11 +74,10 @@ The following custom options are available:
 
 | Option                               | Type                             | Description                                                                          | Default Value                |
 |--------------------------------------|----------------------------------|--------------------------------------------------------------------------------------|------------------------------|
+| org-github-issues-user               | string                           | **REQUIRED** Github user name to use for authentication                              | nil                          |
 | org-github-issues-org-file           | string                           | Path to an existing `org-mode` file in which to write issues                         | "~/Dropbox/org/projects.org" |
 | org-github-issues-filter-by-assignee | boolean                          | Flag to enable filtering issues by assignee.                                         | nil                          |
 | org-github-issues-assignee           | string                           | The assignee to use for filtering                                                    | `user-login-name`            |
 | org-github-issues-headline-prefix    | boolean                          | Flag to enable prefixing headlines with the repository name                          | nil                          |
 | org-github-issues-auto-schedule      | string                           | Threshold for automatically scheduling new issues                                    | "+0d"                        |
-| org-github-tag-transformations       | alsit :value-type (group-string) | An alsit with trasnformations to apply to github labels when converting them to tags | '(("[\s/-]+" "_")            |
-
-
+| org-github-tag-transformations       | alist :value-type (group-string) | An alist with trasnformations to apply to github labels when converting them to tags | '(("[\s/-]+" "_")            |
