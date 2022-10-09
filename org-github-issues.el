@@ -480,7 +480,7 @@ Executing this function will replace already downloaded issues."
         (ogi--insert-org-entries (ogi--generate-org-entries-for-pulls owner repo level pulls)
                                  repository)))))
 
-(defun org-github-issues-fetch-all ()
+(defun org-github-issues-sync-all ()
   "Sync all github repository issues and pull requests."
   (interactive)
   (let ((repos (ogi--collect-synced-repository-names)))
