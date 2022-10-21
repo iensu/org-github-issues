@@ -369,14 +369,13 @@ This variable exists purely for convenience and should be avoided. Please use `a
   "Insert ENTRIES under HEADLINE."
   (let ((body (if entries (string-join entries "\n") nil))
         (pos (ogi--get-org-file-headline-position headline)))
-    (setq body (replace-regexp-in-string "\r" "" body))
     (save-excursion
       (with-current-buffer (marker-buffer pos)
         (goto-char pos)
         (outline-next-heading)
         (when body
           (insert "\n")
-          (insert body)
+          (insert (replace-regexp-in-string "\r" "" body))
           (insert "\n"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
