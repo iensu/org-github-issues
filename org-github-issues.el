@@ -338,8 +338,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
 
 (defun ogi--get-org-file-headline-position (headline)
   "Return the marker for the given org HEADLINE."
-  (org-find-exact-heading-in-directory headline
-                                       (file-name-directory org-github-issues-org-file)))
+  (org-find-exact-headline-in-buffer headline (get-file-buffer org-github-issues-org-file)))
 
 (defun ogi--issue-include-p (issue)
   "Predicate that returns non-nil when ISSUE should be included."
