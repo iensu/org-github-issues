@@ -233,7 +233,7 @@ This variable exists purely for convenience and should be avoided. Please use `a
 
 (defun ogi--pull-url (owner repo number)
   "Return url to issue based on OWNER, REPO and issue NUMBER."
-  (format "https://github.com/%s/%s/pulls/%d"
+  (format "https://github.com/%s/%s/pull/%d"
           owner repo number))
 
 (defun ogi--labels-to-tags (issue)
